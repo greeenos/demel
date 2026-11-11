@@ -163,6 +163,7 @@ strong, b, .big-number { font-variant-numeric: tabular-nums; }
 
 /* ---------- Shell: content ---------- */
 .app-body { margin-left: 248px; min-height: 100dvh; }
+:root { --side: 248px; }
 .topbar { height: 76px; padding: 0 40px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .mobile-brand, .bottom-nav { display: none; }
 .welcome { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 560; color: var(--muted); }
@@ -902,7 +903,7 @@ body[data-route=coach] .view-content { display: block; }
 }
 @media (max-width: 1150px) {
   .sidebar { width: 216px; padding-left: 14px; padding-right: 14px; }
-  .app-body { margin-left: 216px; }
+  .app-body { margin-left: 216px; } :root { --side: 216px; }
   main { padding: 14px 28px 0; }
   .topbar { padding: 0 28px; }
   .vitals-grid.expanded { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -924,7 +925,7 @@ body[data-route=coach] .view-content { display: block; }
   .sidebar nav { margin-top: 26px; }
   .nav-item { justify-content: center; padding: 12px; }
   .sidebar-bottom .nav-item { font-size: 0; gap: 0; }
-  .app-body { margin-left: 76px; }
+  .app-body { margin-left: 76px; } :root { --side: 76px; }
   .two-col { grid-template-columns: 1fr; }
   .recovery-detail { flex-direction: column; align-items: stretch; }
   .recovery-detail > .score { flex-direction: row; text-align: left; border-radius: 60px; }
@@ -940,7 +941,7 @@ body[data-route=coach] .view-content { display: block; }
 @media (max-width: 700px) {
   :root { --r-card: 22px; }
   .sidebar { display: none; }
-  .app-body { margin-left: 0; }
+  .app-body { margin-left: 0; } :root { --side: 0; }
   .topbar {
     position: sticky; top: 0; z-index: 25; height: auto; padding: max(12px, env(safe-area-inset-top)) 18px 10px;
     background: linear-gradient(180deg, var(--bg) 55%, color-mix(in srgb, var(--bg) 0%, transparent));
@@ -1522,12 +1523,13 @@ button.b-card, .b-card[data-action] { cursor: pointer; }
 .fab { width: 64px; height: 64px; display: grid; place-items: center; flex-shrink: 0; border: 0; border-radius: 50%; background: var(--slate); box-shadow: var(--slate-shadow), 0 12px 30px -10px rgba(0,0,0,.8); color: var(--text); cursor: pointer; }
 .fab .icon { width: 28px; height: 28px; }
 body[data-bevel] .page-heading { display: none; }
-.dock { display: flex; position: sticky; bottom: 18px; z-index: 20; gap: 10px; max-width: 720px; margin-top: 24px; }
+.dock { display: flex; position: fixed; z-index: 20; bottom: 18px; left: var(--side, 0px); right: 0; gap: 10px; max-width: 752px; margin-inline: auto; padding: 0 16px; }
 .dock .ask-bar { flex: 1; }
 .dock-row .bottom-nav { display: none; }
-@media (min-width: 701px) { body[data-bevel] .view-content { max-width: 720px; } }
+@media (min-width: 701px) { body[data-bevel] .view-content { max-width: 720px; margin-inline: auto; } main { padding-bottom: 110px; } }
+@media (min-width: 701px) and (max-width: 1150px) { .dock { padding: 0 28px; } }
 @media (max-width: 700px) {
-  .dock { flex-direction: column; gap: 10px; position: fixed; z-index: 31; left: 12px; right: 12px; bottom: max(12px, env(safe-area-inset-bottom)); margin: 0; pointer-events: none; }
+  .dock { flex-direction: column; gap: 10px; position: fixed; z-index: 31; left: 0; right: 0; bottom: max(12px, env(safe-area-inset-bottom)); max-width: 600px; margin-inline: auto; padding: 0 12px; pointer-events: none; }
   .dock > * { pointer-events: auto; }
   .dock-row { display: flex; align-items: center; gap: 10px; }
   .dock-row .bottom-nav { display: flex; position: static; flex: 1; }
