@@ -231,7 +231,7 @@ async def _sync(days):
                     for _ in range(40):
                         body = {"range": {"startTime": cursor.astimezone(ZoneInfo("UTC")).isoformat().replace("+00:00", "Z"),
                                           "endTime": chunk_end.astimezone(ZoneInfo("UTC")).isoformat().replace("+00:00", "Z")},
-                                "windowSize": "60s", "pageSize": 10000, "dataSourceFamily": "users/me/dataSourceFamilies/all-sources"}
+                                "windowSize": "60s", "pageSize": 10000, "dataSourceFamily": "users/me/dataSourceFamilies/google-wearables"}
                         if page_token:
                             body["pageToken"] = page_token
                         r = await client.post(f"https://health.googleapis.com/v4/users/me/dataTypes/{typ}/dataPoints:rollUp", json=body, headers=headers)
