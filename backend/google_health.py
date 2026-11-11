@@ -121,23 +121,6 @@ def session_entry(point, key, timezone):
         "start": interval.get("startTime", ""), "end": interval.get("endTime", "")})
 
 
-def merge_step_points(points):
-    """{epoch_minute: steps}: each point spread evenly over its minutes, then the highest source per minute."""
-    sources = {}
-    for p in points:
-        interval = p["steps"]["interval"]
-        a = int(datetime.fromisoformat(interval["startTime"].replace("Z", "+00:00")).timestamp() // 60)
-        b = max(a + 1, int(datetime.fromisoformat(interval["endTime"].replace("Z", "+00:00")).timestamp() // 60))
-        per_source = sources.setdefault(json.dumps(p.get("dataSource", {}).get("platform")), {})
-        for m in range(a, b):
-            per_source[m] = per_source.get(m, 0) + int(p["steps"]["count"]) / (b - a)
-    merged = {}
-    for per_source in sources.values():
-        for m, v in per_source.items():
-            merged[m] = max(merged.get(m, 0), v)
-    return merged
-
-
 async def sync(days=30):
     async with LOCK:
         return await _sync(days)
@@ -238,37 +221,7 @@ async def _sync(days):
         # Minute-level series power heart-rate zones, strain, stress and heart-rate recovery.
         # The API caps heart-rate roll-ups at 14 days per request, so the window is chunked.
         zone = ZoneInfo(profile.timezone)
-        try:
-            # Steps: the watch and the phone count the same walk, so the roll-ups keep only the watch.
-            # Like the Google Health app, merge raw points from every source and keep the higher count per minute.
-            points, page_token = [], ""
-            for _ in range(200):
-                params = {"pageSize": 1000, "dataSourceFamily": "users/me/dataSourceFamilies/all-sources",
-                          "filter": f'steps.interval.civil_start_time >= "{start}" AND steps.interval.civil_start_time < "{end}"'}
-                if page_token:
-                    params["pageToken"] = page_token
-                r = await client.get("https://health.googleapis.com/v4/users/me/dataTypes/steps/dataPoints", params=params, headers=headers)
-                if r.status_code != 200:
-                    raise ValueError(api_error(r, "steps (minutes)"))
-                payload = r.json()
-                points.extend(payload.get("dataPoints", []))
-                page_token = payload.get("nextPageToken", "")
-                if not page_token:
-                    break
-            merged = merge_step_points(points)
-            google_data.store_minutes("steps-minutes", merged.items(), start.isoformat(), end.isoformat(), profile.timezone)
-            totals = {}
-            for m, v in merged.items():
-                day = datetime.fromtimestamp(m * 60, zone).date().isoformat()
-                totals[day] = totals.get(day, 0) + v
-            for day, total in totals.items():
-                if start.isoformat() <= day < end.isoformat() and total > vitals.get(day, {}).get("steps", 0):
-                    vitals.setdefault(day, {})["steps"] = round(total)
-                    changed.add(day)
-        except (ValueError, KeyError, TypeError, httpx.HTTPError) as exc:
-            errors.append(str(exc)[:400])
-
-        for typ, key, field in (("heart-rate", "heartRate", "beatsPerMinuteAvg"),):
+        for typ, key, field in (("heart-rate", "heartRate", "beatsPerMinuteAvg"), ("steps", "steps", "countSum")):
             try:
                 samples, cursor = [], datetime.combine(start, datetime.min.time(), zone)
                 stop_at = datetime.combine(end, datetime.min.time(), zone)

@@ -54,12 +54,3 @@ def test_journal_habits_are_validated():
     assert Journal(habits={"late_meal": True, "keto": None}).habits["late_meal"] is True
     with pytest.raises(ValidationError):
         Journal(habits={"bad key!": True})
-
-
-def test_steps_merge_takes_the_higher_source_per_minute():
-    from backend.google_health import merge_step_points
-    pt = lambda platform, start, end, n: {"dataSource": {"platform": platform}, "steps": {"count": str(n), "interval": {"startTime": start, "endTime": end}}}
-    merged = merge_step_points([pt("FITBIT", "2026-11-11T10:00:00Z", "2026-11-11T10:02:00Z", 200),   # 100/min
-                                pt("HEALTH_KIT", "2026-11-11T10:01:00Z", "2026-11-11T10:03:00Z", 160),  # 80/min, overlaps one minute
-                                pt("HEALTH_KIT", "2026-11-11T11:00:00Z", "2026-11-11T11:01:00Z", 50)])  # phone only
-    assert round(sum(merged.values())) == 100 + 100 + 80 + 50
