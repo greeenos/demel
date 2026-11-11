@@ -1,0 +1,11 @@
+.venv
+node_modules
+data
+data-browser
+.env*
+ACCESS.txt
+review
+.git
+tests
+__pycache__
+*.log

@@ -1,0 +1,20 @@
+# runtime data and secrets: never commit
+data/
+data-browser/
+backups/
+.env*
+ACCESS.txt
+
+# private operator notes and one-off review material (server paths, exports)
+docs/HANDOFF.md
+review/
+
+# build and tooling
+.venv/
+node_modules/
+dist/
+__pycache__/
+.pytest_cache/
+.DS_Store
+._*
+*.log
