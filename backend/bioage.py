@@ -132,8 +132,8 @@ def snapshot(engine, entries, profile, as_of):
     step_ref = 8000 if age < 60 else 6000
     if step_days:
         s = statistics.mean(step_days)
-        factors.append(factor("steps", "Daily Steps", "activity", round(s), "steps", to_years(hr_curve(STEPS, s), hr_curve(STEPS, step_ref)), len(step_days),
-                              ["steps_plateau", "steps"], f"Pooled cohort quartiles (Paluch 2022). Benefits level off around {step_ref:,}+ steps a day at your age.", f"{step_ref:,}+"))
+        factors.append(factor("steps", "Daily Steps (4-week average)", "activity", round(s), "steps/day", to_years(hr_curve(STEPS, s), hr_curve(STEPS, step_ref)), len(step_days),
+                              ["steps_plateau", "steps"], f"Average of {len(step_days)} Fitbit days from {window[0]} to {window[-1]}, not today's count. Pooled cohort quartiles (Paluch 2022): benefits level off around {step_ref:,}+ steps a day at your age.", f"{step_ref:,}+"))
     else:
         factors.append(factor("steps", "Daily Steps", "activity", None, "steps", None, 0, ["steps"], "No step data."))
     hr_days = [d for d in window if engine.has_hr(d)]

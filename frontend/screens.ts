@@ -98,6 +98,14 @@ function nutritionCard(s: Obj): string {
  return `<article class="b-card foods" data-action="nav:nutrition"><div class="b-head tight"><h3>Today's foods</h3>${icon('arrow')}</div><div class="foods-body"><div class="kcal-dial" style="--p:${pct}"><div><strong>${fmt(t.calories || 0)}</strong><span>kcal</span></div></div><div class="macros">${[['Protein', 'protein', p.protein_goal, 'green'], ['Carbs', 'carbs', p.carb_goal, 'blue'], ['Fat', 'fat', p.fat_goal, 'orange']].map(([l, k, g, c]) => `<div class="${c}"><span>${l} <b>${fmt(t[k as string] || 0)}g</b></span>${dots(t[k as string] || 0, Number(g))}</div>`).join('')}</div></div></article>`;
 }
 
+/* ---------- Steps (Fitbit only) ---------- */
+function stepsCard(s: Obj): string {
+ const t = (s.rings?.trends?.strain || []).find((x: Obj) => x.key === 'steps'), goal = s.profile.steps_goal, v = s.today.steps ?? null;
+ if (!t) return '';
+ const done = v != null && v >= goal;
+ return `${sectionHead('Steps', 'Fitbit · today')}<article class="b-card trend" data-action="nav:strain"><div class="trend-text"><span class="b-label">${icon('workout')}Step Count</span><strong class="b-value">${v == null ? '—' : fmt(v)}</strong><span class="b-status ${done ? 'green' : 'muted'}">${icon(done ? 'check' : 'target')}${v == null ? 'No Fitbit data yet' : `${fmt(Math.min(100, 100 * v / goal))}% of ${fmt(goal)} goal`}</span></div>${spark(t.points, 'var(--orange)')}<span class="b-arrow">${icon('arrow')}</span></article>`;
+}
+
 /* ---------- Home ---------- */
 export function homeView(s: Obj, day: string): string {
  const r = s.rings || {};
@@ -106,6 +114,7 @@ export function homeView(s: Obj, day: string): string {
  ${sectionHead('Stress & Energy')}${stressEnergy(s)}
  ${sectionHead('Nutrition')}${nutritionCard(s)}
  ${sectionHead('Health Monitor')}<div class="monitor-grid">${(r.monitor || []).map(monitorTile).join('')}</div>
+ ${stepsCard(s)}
  ${sectionHead('Timeline', `${(r.sessions || []).length + (r.sleep ? 1 : 0)} events`)}${timeline(s)}
  ${hydrationView(s, day)}`;
 }
