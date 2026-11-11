@@ -4,7 +4,7 @@ import { vessel } from './water';
 
 export const meals: [string,string][] = [['breakfast','Breakfast'],['lunch','Lunch'],['dinner','Dinner'],['snack','Snack']];
 export const activities: [string,string][] = [['strength','Strength training'],['running','Running'],['walking','Walking'],['biking','Cycling'],['swimming','Swimming'],['yoga','Yoga'],['other','Other activity']];
-export const nav: [string,string,string][] = [['today','Today','home'],['health','Health','heart'],['nutrition','Food','food'],['workouts','Training','workout'],['coach','Coach','spark']];
+export const nav: [string,string,string][] = [['today','Home','home'],['journal','Journal','book'],['fitness','Fitness','workout'],['biology','Biology','heart']];
 const cardHead=(title:string,action='',label='Details')=>`<div class="card-head"><h2>${esc(title)}</h2>${action?`<button class="text-btn" data-action="${action}">${esc(label)}${icon('chevron')}</button>`:''}</div>`;
 const stat=(label:string,value:unknown,unit:string,symbol:string,color='green')=>`<div class="vital-stat"><span class="stat-icon ${color}">${icon(symbol)}</span><div><span>${esc(label)}</span><strong>${fmt(value,1)} <small>${esc(unit)}</small></strong></div></div>`;
 const dailyEntries=(s:Obj,kind:string,day:string)=>s.entries.filter((e:Obj)=>e.kind===kind&&e.day===day);
@@ -37,7 +37,7 @@ export function healthView(s:Obj,day:string,tab:string):string {
  return `<div class="tabs" role="tablist">${tabs.map(([k,l])=>`<button role="tab" aria-selected="${tab===k}" class="${tab===k?'active':''}" data-action="tab:${k}">${l}</button>`).join('')}</div>${content}`;
 }
 
-function ageView(s:Obj):string {
+export function ageView(s:Obj):string {
  const latest=s.ages.at(-1),reports=s.entries.filter((e:Obj)=>e.kind==='clock'),labs=s.entries.filter((e:Obj)=>e.kind==='lab');
  return `<section class="card biological-card"><div class="card-head"><h2>Biological age</h2><span class="pill green">Clinical PhenoAge</span></div>${latest?`<div class="age-result"><span class="age-symbol">${icon('age')}</span><strong>${fmt(latest.age,1)}<small> yrs</small></strong><span class="age-difference">${latest.difference>0?'+':''}${fmt(latest.difference,1)} years vs your calendar age at the blood draw</span></div><div class="age-details"><span>Age at draw <b>${fmt(latest.chronological,1)} yrs</b></span><span>Draw date <b>${esc(latest.day)}</b></span><span>Method <b>Levine et al., 2018</b></span></div><p class="card-note">${esc(latest.note)}</p>`:empty('age','Biological age starts with data','Clinical PhenoAge needs your birth date and all 9 blood markers from a single draw. Missing values are never estimated.')}${!s.profile.birthdate?`<div class="notice">First add your birth date in ${'<button class="text-btn" data-action="nav:settings">settings</button>'}.</div>`:''}<div class="button-row">${button('Add blood test','add:lab','primary','plus')}${button('Methods and studies','methodology','secondary','book')}</div></section>
  ${s.ages.length>1?`<section class="card">${cardHead('PhenoAge over time')}${chart(s.ages,'age','var(--green)','yrs',90)}</section>`:''}

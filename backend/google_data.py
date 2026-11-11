@@ -134,6 +134,38 @@ def store(typ, points, start, end, tz):
     return sum(len(items) for items in groups.values())
 
 
+MINUTE_TYPES = ("heart-rate-minutes", "steps-minutes")
+
+
+def store_minutes(typ, samples, start, end, tz):
+    """Keep one compact per-minute series per local day: [[epoch_minute, value], ...]."""
+    groups = defaultdict(list)
+    zone = ZoneInfo(tz)
+    for minute, value in samples:
+        day = datetime.fromtimestamp(minute * 60, zone).date().isoformat()
+        if start <= day < end:
+            groups[day].append([minute, round(value, 1)])
+    with db.db() as c:
+        c.execute("DELETE FROM google_days WHERE type=? AND day>=? AND day<?", (typ, start, end))
+        for day, items in groups.items():
+            items.sort()
+            values = [v for _, v in items]
+            summary = [{"field": "minutes", "value": len(items), "min": min(values), "max": max(values), "sum": sum(values),
+                        "count": len(items), "unit": "min", "description": "Minutes with a value"}]
+            c.execute("INSERT INTO google_days VALUES(?,?,?,?,?)", (typ, day, json.dumps(summary),
+                      zlib.compress(json.dumps(items).encode(), 6), db.now()))
+    return sum(len(v) for v in groups.values())
+
+
+def minutes(typ, start, end):
+    """Per-minute series between two local days (inclusive) as {epoch_minute: value}."""
+    out = {}
+    with db.db() as c:
+        for r in c.execute("SELECT raw FROM google_days WHERE type=? AND day BETWEEN ? AND ?", (typ, start, end)):
+            out.update({int(m): v for m, v in json.loads(zlib.decompress(r["raw"]))})
+    return out
+
+
 def summaries(start="1900-01-01", end="9999-12-31"):
     with db.db() as c:
         return [{"type": r["type"], "day": r["day"], "fields": json.loads(r["summary"]), "updated": r["updated"]}

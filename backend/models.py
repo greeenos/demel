@@ -32,6 +32,9 @@ class Profile(Model):
     evening_time: str = Field(default="21:00", pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
     water_reminders: bool = False
     workout_reminders: bool = False
+    smoking: Literal["unknown", "never", "former", "current"] = "unknown"
+    cigarettes_per_day: int | None = Field(default=None, ge=1, le=100)
+    quit_year: int | None = Field(default=None, ge=1940, le=2100)
 
     @field_validator("timezone")
     @classmethod
@@ -86,6 +89,8 @@ class Workout(Model):
     rpe: int | None = Field(default=None, ge=1, le=10)
     sets: list[ExerciseSet] = Field(default_factory=list, max_length=200)
     notes: str = Field(default="", max_length=4000)
+    start: str = Field(default="", max_length=40)
+    end: str = Field(default="", max_length=40)
 
 
 class Plan(Model):
@@ -140,6 +145,16 @@ class Journal(Model):
     meditation: int = Field(default=0, ge=0, le=300)
     illness: bool = False
     notes: str = Field(default="", max_length=5000)
+    alcohol_drinks: int | None = Field(default=None, ge=0, le=60)
+    habits: dict[str, bool | None] = Field(default_factory=dict, max_length=40)
+
+    @field_validator("habits")
+    @classmethod
+    def habit_keys(cls, v):
+        for key in v:
+            if not key.replace("_", "").isalnum() or len(key) > 40:
+                raise ValueError("Invalid habit name")
+        return v
 
 
 class Water(Model):

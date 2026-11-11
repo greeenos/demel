@@ -1,6 +1,6 @@
 # runtime data and secrets: never commit
-data/
-data-browser/
+/data/
+/data-browser/
 backups/
 .env*
 ACCESS.txt
@@ -18,3 +18,6 @@ __pycache__/
 .DS_Store
 ._*
 *.log
+
+# local knowledge graph (absolute paths, regenerate with /graphify)
+graphify-out/

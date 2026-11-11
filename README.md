@@ -36,7 +36,7 @@ Commercial health apps keep your data on their servers and hide how their scores
 ## Features
 
 **Today**
-- Three score rings: **Sleep**, **Recovery** and **Strain**, each with a transparent formula.
+- Three score rings: **Strain**, **Recovery** and **Sleep** from minute heart rate, HRV and sleep stages, plus stress, energy, heart-rate zones, training load and a **biological age** built from published hazard ratios (see `docs/SCIENCE.md`).
 - Vitals at a glance: HRV, resting heart rate, sleep and SpO₂, with a 14-day chart.
 - Steps, active energy, nutrition summary and a fitness-age teaser.
 
@@ -220,7 +220,9 @@ VITAL_TEST_URL=http://127.0.0.1:8208 VITAL_TEST_PASSWORD=... .venv/bin/python sc
 backend/
   main.py           FastAPI app: auth, API routes, AI chat and tool loop
   models.py         pydantic models for every entry type
-  scores.py         sleep / recovery / strain and daily aggregation
+  engine.py         rings, zones, stress, energy, training load
+  bioage.py         biological age from hazard ratios
+  scores.py         daily aggregation and dashboard summary
   analytics.py      fitness age, sleep debt, regularity, correlations
   age.py            Clinical PhenoAge and the study catalogue
   google_health.py  OAuth and sync

@@ -1,4 +1,4 @@
-"""Transparent wellness heuristics; not Bevel algorithms or validated medical scores."""
+"""Daily records merged per day, plus the dashboard summary built on backend.engine."""
 import math
 import statistics
 from datetime import date, timedelta
@@ -35,28 +35,20 @@ def clamp(v):
     return max(0, min(100, v))
 
 
-def dashboard(entries, profile, on):
+def dashboard(entries, profile, on, hr=None, steps=None, measurements=None):
+    """Rings for one day. Minute heart rate/steps are optional (tests and notifications may omit them)."""
+    from .engine import compute
     days = daily(entries)
     current = days.get(on, {"day": on})
-    before = [(date.fromisoformat(on) - timedelta(days=i)).isoformat() for i in range(1, 31)]
-    baseline = [days[d] for d in before if d in days]
-    sleep = current.get("sleep")
-    sleep_score = round(clamp(100 * sleep["minutes"] / (profile.sleep_goal * 60))) if sleep else None
-    result = {"sleep": sleep_score, "recovery": None, "strain": None, "baseline_days": 0, "drivers": []}
-    paired = [d for d in baseline if d.get("hrv") is not None and d.get("rhr") is not None]
-    result["baseline_days"] = len(paired)
-    if len(paired) >= 14 and current.get("hrv") and current.get("rhr") and sleep_score is not None:
-        log_hrvs = [math.log(d["hrv"]) for d in paired]
-        hrs = [d["rhr"] for d in paired]
-        hz = (math.log(current["hrv"]) - statistics.mean(log_hrvs)) / max(statistics.pstdev(log_hrvs), 0.10)
-        rz = (current["rhr"] - statistics.mean(hrs)) / max(statistics.pstdev(hrs), 2)
-        recovery = 50 + 15 * hz - 12 * rz + 0.25 * (sleep_score - 80)
-        result["recovery"] = round(clamp(recovery))
-        result["drivers"] = [{"name": "HRV", "value": current["hrv"], "baseline": round(math.exp(statistics.mean(log_hrvs)), 1)},
-                             {"name": "Resting HR", "value": current["rhr"], "baseline": round(statistics.mean(hrs), 1)}]
-    # session-RPE load is used only when the user supplied effort; missing RPE is not fabricated.
-    if current.get("load", 0) > 0:
-        result["strain"] = round(min(100, 100 * (1 - math.exp(-current["load"] / 400))))
+    rings = compute(days, entries, profile, on, hr, steps, measurements, detail=False)
+    rec = rings["recovery"]
+    result = {"sleep": rings["sleep"]["score"] if rings["sleep"] else None, "recovery": rec["score"],
+              "strain": rings["strain"]["score"] if rings["strain"] else None, "baseline_days": rec["baseline_days"],
+              "calibrating": rec["calibrating"], "target": rings["target"], "drivers": []}
+    comp = rec.get("components") or {}
+    if comp.get("hrv"):
+        result["drivers"] = [{"name": "HRV", "value": comp["hrv"]["value"], "baseline": comp["hrv"]["baseline"]},
+                             {"name": "Resting HR", "value": comp["rhr"]["value"], "baseline": comp["rhr"]["baseline"]}]
     history = []
     for i in range(89, -1, -1):
         key = (date.fromisoformat(on) - timedelta(days=i)).isoformat()
