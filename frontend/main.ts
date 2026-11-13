@@ -4,6 +4,7 @@ import { type Obj, esc, fmt, icon, button, input, number, select, toggle, wordma
 import { nav, meals, activities, todayView, healthView, nutritionView, workoutsView, coachView, settingsView, chatMeta } from './views';
 import { demoState } from './demo';
 import { launch, settle } from './water';
+import { homeView, ringDetail, journalView, fitnessView, biologyView, bioCategoryModal, bioConfidenceModal, methodModal, sessionModal, addMenu, askBar, type Ring } from './screens';
 
 const app=document.querySelector<HTMLDivElement>('#app')!;
 let state:Obj|null=null, demo=false, offline=false, busy=false, healthTab='vitals';
@@ -19,8 +20,10 @@ const reducedMotion=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
 const sheet=document.createElement('dialog');sheet.className='sheet';document.body.append(sheet);
 const metricLabels:Obj={rhr:['Resting heart rate','bpm',20,200],hrv:['HRV (RMSSD)','ms',1,500],steps:['Steps','',0,200000],active_kcal:['Active energy','kcal',0,20000],weight:['Weight','kg',20,400],spo2:['SpO₂','%',50,100],respiratory_rate:['Breathing rate','/min',3,60],temperature:['Skin temperature','°C',20,45],vo2max:['VO₂ max','ml/kg/min',5,100],systolic:['Systolic pressure','mmHg',60,260],diastolic:['Diastolic pressure','mmHg',30,160]};
 const labLabels:Obj={albumin:['Albumin','g/L',100],creatinine:['Creatinine','µmol/L',3000],glucose:['Glucose','mmol/L',60],crp:['CRP','mg/L',1000],lymphocytes:['Lymphocytes','%',100],mcv:['MCV','fL',200],rdw:['RDW','%',60],alp:['ALP','U/L',3000],wbc:['White blood cells','10⁹/L',300]};
-const navColor:Obj={today:'var(--orange)',health:'var(--coral)',nutrition:'var(--green)',workouts:'var(--pink)',coach:'var(--purple)'};
-const titleMap:Obj={today:['Your health, in context.','Today'],health:['Every measurement has its context.','Health'],nutrition:['Good food. Good feeling.','Nutrition'],workouts:['Movement that suits you.','Training'],coach:['Ask. Get to know yourself.','Demel AI'],settings:['Everything your way.','Settings']};
+const navColor:Obj={today:'var(--orange)',journal:'#c8a64b',fitness:'var(--coral)',biology:'var(--pink)',health:'var(--coral)',nutrition:'var(--green)',workouts:'var(--pink)',coach:'var(--purple)'};
+const BEVEL=['today','journal','fitness','biology','strain','recovery','sleep'];
+const requestedInsights=new Set<string>();
+const titleMap:Obj={journal:['Habits in context.','Journal'],fitness:['Training load and cardio.','Fitness'],biology:['Biological age.','Biology'],strain:['Strain','Strain'],recovery:['Recovery','Recovery'],sleep:['Sleep','Sleep'],today:['Your health, in context.','Today'],health:['Every measurement has its context.','Health'],nutrition:['Good food. Good feeling.','Nutrition'],workouts:['Movement that suits you.','Training'],coach:['Ask. Get to know yourself.','Demel AI'],settings:['Everything your way.','Settings']};
 const foodBasics:Obj[]=[
  {name:'Rolled oats',calories:370,protein:13,carbs:60,fat:7,fiber:10,grams:100},
  {name:'Greek yogurt 0%',calories:59,protein:10,carbs:3.6,fat:.4,fiber:0,grams:100},
@@ -54,15 +57,30 @@ function render(){
  const current=titleMap[route]?route:'today',title=titleMap[current];
  document.body.dataset.route=current;
  const activeNav=current==='settings'?'':current;
- const content=current==='today'?todayView(state,selectedDay):current==='health'?healthView(state,selectedDay,healthTab):current==='nutrition'?nutritionView(state,selectedDay):current==='workouts'?workoutsView(state,selectedDay):current==='coach'?coachView(state,busy):settingsView(state);
- app.innerHTML=`<aside class="sidebar"><a class="brand" href="#today"><img class="brand-mark" src="/icon.svg?v=2" alt="" width="32" height="32">${wordmark}</a><nav aria-label="Main navigation">${nav.map(([k,l,i])=>`<button class="nav-item ${activeNav===k?'active':''}" style="--c:${navColor[k]}" data-action="nav:${k}">${icon(i)}<span>${l}</span></button>`).join('')}</nav><div class="sidebar-bottom">${syncStatus(state)}<button class="nav-item ${current==='settings'?'active':''}" data-action="nav:settings">${icon('settings')} Settings</button></div></aside>
+ document.body.toggleAttribute('data-bevel',BEVEL.includes(current));
+ const content=current==='today'?homeView(state,selectedDay):current==='journal'?journalView(state,selectedDay):current==='fitness'?fitnessView(state,selectedDay):current==='biology'?biologyView(state):['strain','recovery','sleep'].includes(current)?ringDetail(state,current as Ring,selectedDay):current==='health'?healthView(state,selectedDay,healthTab):current==='nutrition'?nutritionView(state,selectedDay):current==='workouts'?workoutsView(state,selectedDay):current==='coach'?coachView(state,busy):settingsView(state);
+ app.innerHTML=`<aside class="sidebar"><a class="brand" href="#today"><img class="brand-mark" src="/icon.svg?v=2" alt="" width="32" height="32">${wordmark}</a><nav aria-label="Main navigation">${nav.map(([k,l,i])=>`<button class="nav-item ${activeNav===k?'active':''}" style="--c:${navColor[k]}" data-action="nav:${k}">${icon(i)}<span>${l}</span></button>`).join('')}</nav><div class="sidebar-extra">${[['nutrition','Food','food'],['coach','Coach','spark']].map(([k,l,i])=>`<button class="nav-item ${activeNav===k?'active':''}" style="--c:${navColor[k]}" data-action="nav:${k}">${icon(i)}<span>${l}</span></button>`).join('')}</div><div class="sidebar-bottom">${syncStatus(state)}<button class="nav-item ${current==='settings'?'active':''}" data-action="nav:settings">${icon('settings')} Settings</button></div></aside>
  <div class="app-body">${demo?'<div class="demo-banner">Demo data · nothing is saved <button data-action="exit-demo">Leave demo</button></div>':''}${offline?'<div class="offline-banner">Offline copy · last loaded '+esc(new Date(state.server_time).toLocaleString('en-GB'))+'. Logging needs a connection.</div>':''}<header class="topbar"><a class="mobile-brand" href="#today"><img class="brand-mark" src="/icon.svg?v=2" alt="" width="32" height="32">${wordmark}</a><div class="welcome">${state.profile.name?'Hi, '+esc(state.profile.name):'Welcome to your space'} <span>${icon('sun')}</span></div><div class="top-actions">${syncStatus(state,true)}<button class="avatar" data-action="nav:settings" aria-label="Open settings">${esc((state.profile.name||'V').charAt(0).toUpperCase())}</button></div></header>
  <main><div class="page-heading"><div><h1>${title[1]}</h1><p>${title[0]}</p></div>${current!=='settings'&&current!=='coach'?`<div class="day-control"><button class="icon-btn" data-action="day:-1" aria-label="Previous day">${icon('back')}</button><label><span class="sr-only">Selected day</span><input type="date" id="day-picker" value="${selectedDay}" max="${todayStr()}"></label><button class="icon-btn" data-action="day:1" aria-label="Next day">${icon('chevron')}</button></div>`:''}</div><div class="view-content">${content}</div><footer class="page-footer"><span>${icon('shield')} Your data stays on your server. AI is only used when you ask.</span><a href="https://www.streamlinehq.com" target="_blank" rel="noopener noreferrer">Icons by Streamline · CC BY 4.0</a></footer></main></div>
- <nav class="bottom-nav" aria-label="Mobile navigation">${nav.map(([k,l,i])=>`<button class="${activeNav===k?'active':''}" style="--c:${navColor[k]}" data-action="nav:${k}" aria-label="${l}" ${activeNav===k?'aria-current="page"':''}>${icon(i)}<span>${l}</span></button>`).join('')}</nav>`;
+ <div class="dock">${current==='coach'?'':askBar()}<div class="dock-row"><nav class="bottom-nav" aria-label="Mobile navigation">${nav.map(([k,l,i])=>`<button class="${activeNav===k?'active':''}" style="--c:${navColor[k]}" data-action="nav:${k}" aria-label="${l}" ${activeNav===k?'aria-current="page"':''}>${icon(i)}<span>${l}</span></button>`).join('')}</nav><button class="fab" data-action="add-menu" aria-label="Add">${icon('plus')}</button></div></div>`;
  if(labsOpen)app.querySelector('.optional-labs')?.setAttribute('open','');
  if(current==='coach')app.querySelector('.chat-messages')?.scrollTo({top:100000});
  if(pendingWater!==null){const from=pendingWater;pendingWater=null;settle(from);}
  const anim=enter;enter='';motion(anim);
+ fetchInsights();
+}
+/* AI insight cards load lazily, once per day and card; the server caches them. */
+function fetchInsights(){
+ if(demo||!state)return;
+ app.querySelectorAll<HTMLElement>('[data-insight]').forEach(el=>{
+  const kind=el.dataset.insight!,key=selectedDay+':'+kind;if(requestedInsights.has(key))return;requestedInsights.add(key);
+  api('/ai/insight','POST',{kind,day:selectedDay}).then(card=>{if(!state)return;state.insights={...(state.insights||{}),[kind]:card};render();}).catch(()=>{el.outerHTML=`<article class="b-card insight muted"><p>The AI insight is unavailable right now.</p></article>`;});
+ });
+}
+async function saveJournal(patch:Obj){
+ const old=state!.entries.find((e:Obj)=>e.kind==='journal'&&e.day===selectedDay);
+ const base={mood:3,energy:3,stress:3,alcohol:false,caffeine:0,meditation:0,illness:false,notes:'',habits:{},...(old?.data||{})};
+ await api('/entries','POST',{kind:'journal',day:selectedDay,data:{...base,...patch},...(old?{id:old.id}:{})});await load();
 }
 /* ---------- Motion ---------- */
 function pill(sel:string){
@@ -156,6 +174,19 @@ async function action(value:string,target?:HTMLElement){
  if(value==='training-history'||value.startsWith('training-page:')){const offset=value==='training-history'?0:Number(value.slice(14));const r=await api('/training/history?offset='+offset);modal('Full training history',`<p class="muted">${fmt(r.total)} saved activities</p>${r.entries.map((e:Obj)=>`<button class="history-workout" data-action="history-edit:${e.id}"><span><strong>${esc(e.data.name)}</strong><small>${esc(e.day)} · ${fmt(e.data.minutes)} min · ${e.data.sets.length} sets</small></span>${icon('chevron')}</button>`).join('')}<div class="button-row">${offset?button('Previous','training-page:'+Math.max(0,offset-30),'secondary'):''}${offset+r.entries.length<r.total?button('Next','training-page:'+(offset+30),'secondary'):''}</div>`);historyEntries=r.entries;return;}
  if(value.startsWith('history-edit:')){const e=historyEntries.find(e=>e.id===value.slice(13));if(e){if(e.source==='google'){modal(e.data.name,`<p>${esc(e.day)} · ${fmt(e.data.minutes)} minutes</p><p class="muted">Fitbit activity. Edit it in the source app and run a sync.</p>`);}else{if(!state!.entries.some((x:Obj)=>x.id===e.id))state!.entries.push(e);entryForm('workout',e);}}return;}
  if(value==='close'){sheet.close();return;}
+ if(value==='add-menu'){modal('Add',addMenu());return;}
+ if(value.startsWith('method:')){modal('How it is calculated',methodModal(state!,value.slice(7)));return;}
+ if(value==='stress'||value==='energy'){modal('Stress & Energy',methodModal(state!,'stress'));return;}
+ if(value.startsWith('bio-cat:')){const c=state!.bioage?.categories?.[value.slice(8)];if(c)modal(c.label,bioCategoryModal(state!,value.slice(8)));return;}
+ if(value==='bio-confidence'){modal(`${state!.bioage?.confidence}% confidence`,bioConfidenceModal(state!));return;}
+ if(value==='bio-history'){modal('Biological age by week',(state!.bioage?.history||[]).slice().reverse().map((h:Obj)=>`<div class="driver"><span>${esc(h.day)}</span><strong>${fmt(h.biological,1)}</strong><small>calendar age ${fmt(h.chronological,1)}</small></div>`).join('')||'<p class="muted">No history yet.</p>');return;}
+ if(value.startsWith('session:')){const x=(state!.rings?.sessions||[]).find((v:Obj)=>v.id===value.slice(8));if(x)modal(x.name,sessionModal(state!,x.id));return;}
+ if(value.startsWith('insight-open:')){const kind=value.slice(13),card=state!.insights?.[kind];modal(card?`${card.emoji} ${card.title}`:'Insights',card?`<p>${esc(card.text)}</p><div class="button-row">${button('Ask a follow-up','nav:coach','secondary','spark')}</div><p class="card-note">Written by ${esc(card.model||'AI')} from today's numbers. Not medical advice.</p>`:`<p class="muted">The insight is still being written, or AI is not set up in settings.</p>`);return;}
+ if(value.startsWith('goto-day:')){selectedDay=value.slice(9);enter='up';if(demo){state=demoState(selectedDay);render();}else await load();return;}
+ if(value.startsWith('habit:')){const [,key,v]=value.split(':'),flag=v==='yes'?true:v==='no'?false:null;if(key==='illness')await saveJournal({illness:!!flag});else{const old=state!.entries.find((e:Obj)=>e.kind==='journal'&&e.day===selectedDay);await saveJournal({habits:{...(old?.data.habits||{}),[key]:flag}});}return;}
+ if(value.startsWith('journal-num:')){const key=value.slice(12),old=state!.entries.find((e:Obj)=>e.kind==='journal'&&e.day===selectedDay)?.data||{};modal(key==='caffeine'?'Caffeine':'Alcohol',`<form id="journal-num-form" data-key="${esc(key)}">${number('value',key==='caffeine'?'Caffeine (mg)':'Drinks (10 g alcohol each)',old[key]??'',`min="0" max="${key==='caffeine'?1500:60}" step="1" required`)}<div class="form-actions"><button class="btn primary" type="submit">Save</button></div><p class="form-error" role="alert"></p></form>`);return;}
+ if(value==='journal-mood'){modal('Daily mood',`<div class="add-grid">${['😣 Very low','😕 Low','😐 Neutral','🙂 Good','😊 Great'].map((m,i)=>`<button class="b-card add-item" data-action="mood:${i+1}">${m}</button>`).join('')}</div>`);return;}
+ if(value.startsWith('mood:')){sheet.close();await saveJournal({mood:Number(value.slice(5))});return;}
  if(value.startsWith('nav:')){navigate(value.slice(4));return;}
  if(value.startsWith('tab:')){healthTab=value.slice(4);navigate('health');return;}
  if(value.startsWith('add:')){entryForm(value.slice(4));return;}
@@ -220,7 +251,7 @@ document.addEventListener('submit',async e=>{
   if(kind==='clock')fieldsNumeric(data,['value']);
   if(kind==='water')fieldsNumeric(data,['ml']);
   if(kind==='sleep'){data.minutes=Number(data.sleep_hours)*60;data.in_bed_minutes=data.bed_hours===''?null:Number(data.bed_hours)*60;data.quality=data.quality?Number(data.quality):null;data.stages=[];delete data.sleep_hours;delete data.bed_hours;}
-  if(kind==='journal'){fieldsNumeric(data,['mood','energy','stress','caffeine','meditation']);data.alcohol=checked('alcohol');data.illness=checked('illness');}
+  if(kind==='journal'){fieldsNumeric(data,['mood','energy','stress','caffeine','meditation']);data.alcohol=checked('alcohol');data.illness=checked('illness');const old=state!.entries.find((e:Obj)=>e.id===entryId);if(old){data.habits=old.data.habits||{};if(old.data.alcohol_drinks!=null)data.alcohol_drinks=data.alcohol?old.data.alcohol_drinks:0;}}
   if(kind==='workout'||kind==='plan'){
    fieldsNumeric(data,kind==='workout'?['minutes','rpe','calories','distance_km','avg_hr']:['minutes']);
    data.sets=Array.from(form.querySelectorAll<HTMLElement>('.set-row')).map(row=>({...JSON.parse(row.dataset.original||'{}'),name:(row.querySelector('[name="set_name"]') as HTMLInputElement).value,reps:Number((row.querySelector('[name="set_reps"]') as HTMLInputElement).value),weight:Number((row.querySelector('[name="set_weight"]') as HTMLInputElement).value),done:(row.querySelector('[name="set_done"]') as HTMLInputElement).checked}));
@@ -238,6 +269,8 @@ document.addEventListener('submit',async e=>{
  if(form.id==='notify-form'){await api('/profile','PUT',{...state!.profile,morning_time:data.morning_time,evening_time:data.evening_time,notify_enabled:checked('notify_enabled'),water_reminders:checked('water_reminders'),workout_reminders:checked('workout_reminders')});await load();toast('Notifications saved.');}
  if(form.id==='password-form'){await api('/auth/password','POST',data);form.reset();toast('Password changed. Other sessions were logged out.');}
  if(form.id==='chat-form')await sendChat(String(data.message));
+ if(form.id==='ask-form'){const message=String(data.message||'').trim();if(message){navigate('coach');await sendChat(message);}}
+ if(form.id==='journal-num-form'){const key=form.dataset.key!,v=Math.round(Number(data.value));sheet.close();await saveJournal(key==='alcohol_drinks'?{alcohol_drinks:v,alcohol:v>0}:{[key]:v});}
  if(form.id==='food-ai-form'){if(submit)submit.textContent='Estimating portion…';const r=await api('/ai/food','POST',{description:data.description,image:activeImage});entryForm('meal',undefined,r.food);toast(r.note);}
  }catch(err){const message=(err as Error).message;if(error)error.textContent=message;else toast(message,true);}finally{if(submit){submit.disabled=false;if(form.id==='food-ai-form')submit.textContent='Estimate values';}}
 });

@@ -36,9 +36,15 @@ Commercial health apps keep your data on their servers and hide how their scores
 ## Features
 
 **Today**
-- Three score rings: **Sleep**, **Recovery** and **Strain**, each with a transparent formula.
+- Three score rings: **Strain**, **Recovery** and **Sleep**. Tap a ring for its detail page with a 7-day trend, its inputs and the method behind it.
+- A daily physiology engine built on per-minute heart rate: heart-rate zones, Edwards TRIMP strain with a **target strain** based on your 14-day load and today's recovery, HRV/RHR-based recovery against your 30-day baseline, plus **Stress**, **Energy**, heart-rate recovery and training load.
+- Short AI insight cards written from today's numbers (optional, only with an OpenRouter key).
 - Vitals at a glance: HRV, resting heart rate, sleep and SpO₂, with a 14-day chart.
-- Steps, active energy, nutrition summary and a fitness-age teaser.
+
+**Journal, Fitness and Biology**
+- **Journal:** one-tap daily habits (yes/no), caffeine and alcohol amounts, illness, shown next to the following night's sleep and recovery.
+- **Fitness:** training load, cardio fitness and per-session detail with zones and energy.
+- **Biology:** a weekly **biological age** from the last 4 weeks across five categories (Sleep, Activity, Fitness, Lifestyle, Blood). Each factor comes from published hazard ratios, converted to years with the Gompertz mortality law, with an overlap correction and a confidence score per factor.
 
 **Health**
 - Overview of all wearable measurements: HRV, resting HR, SpO₂, breathing rate, skin temperature, VO₂ max, weight, steps and blood pressure.
@@ -113,7 +119,7 @@ SQLite (WAL)  ── entries, daily Google archives, settings, encrypted secrets
 
 - **Frontend:** vanilla TypeScript built with Vite. No framework; views are template strings with strict escaping, behind a strict Content-Security-Policy.
 - **Backend:** FastAPI with pydantic validation on every write. One process; no Redis, queue or external database.
-- **Scores:** plain Python in `backend/scores.py`, `backend/analytics.py` and `backend/age.py`, covered by tests. Formulas and sources are in [docs/SCIENCE.md](docs/SCIENCE.md).
+- **Scores:** plain Python in `backend/engine.py` (daily physiology), `backend/bioage.py` (biological age), `backend/scores.py`, `backend/analytics.py` and `backend/age.py`, covered by tests. Every score's method and references are also shown in the app. Formulas and sources are in [docs/SCIENCE.md](docs/SCIENCE.md).
 - **Design:** a dark “bevel” design system with accents taken from the logo. Details in [docs/DESIGN.md](docs/DESIGN.md).
 
 ## Quick start (local)

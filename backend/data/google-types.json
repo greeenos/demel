@@ -1,0 +1,380 @@
+[
+  {
+    "type": "active-energy-burned",
+    "label": "Active energy",
+    "record": "interval",
+    "scope": "activity_and_fitness",
+    "rollup": true,
+    "method": "reconcile",
+    "version": "v4"
+  },
+  {
+    "type": "active-minutes",
+    "label": "Active minutes",
+    "record": "interval",
+    "scope": "activity_and_fitness",
+    "rollup": true,
+    "method": "reconcile",
+    "version": "v4"
+  },
+  {
+    "type": "active-zone-minutes",
+    "label": "Active zone minutes",
+    "record": "interval",
+    "scope": "activity_and_fitness",
+    "rollup": true,
+    "method": "reconcile",
+    "version": "v4"
+  },
+  {
+    "type": "activity-level",
+    "label": "Activity intensity",
+    "record": "interval",
+    "scope": "activity_and_fitness",
+    "rollup": false,
+    "method": "reconcile",
+    "version": "v4"
+  },
+  {
+    "type": "altitude",
+    "label": "Elevation gained",
+    "record": "interval",
+    "scope": "activity_and_fitness",
+    "rollup": true,
+    "method": "reconcile",
+    "version": "v4"
+  },
+  {
+    "type": "blood-glucose",
+    "label": "Blood glucose",
+    "record": "sample",
+    "scope": "health_metrics_and_measurements",
+    "rollup": true,
+    "method": "reconcile",
+    "version": "v4"
+  },
+  {
+    "type": "body-fat",
+    "label": "Body fat",
+    "record": "sample",
+    "scope": "health_metrics_and_measurements",
+    "rollup": true,
+    "method": "reconcile",
+    "version": "v4"
+  },
+  {
+    "type": "calories-in-heart-rate-zone",
+    "label": "Energy in heart-rate zones",
+    "record": "interval",
+    "scope": "activity_and_fitness",
+    "rollup": true,
+    "method": "list",
+    "version": "v4"
+  },
+  {
+    "type": "core-body-temperature",
+    "label": "Body temperature",
+    "record": "sample",
+    "scope": "health_metrics_and_measurements",
+    "rollup": true,
+    "method": "reconcile",
+    "version": "v4"
+  },
+  {
+    "type": "daily-heart-rate-variability",
+    "label": "Daily HRV",
+    "record": "daily",
+    "scope": "health_metrics_and_measurements",
+    "rollup": false,
+    "method": "reconcile",
+    "version": "v4"
+  },
+  {
+    "type": "daily-heart-rate-zones",
+    "label": "Personal heart-rate zones",
+    "record": "daily",
+    "scope": "health_metrics_and_measurements",
+    "rollup": false,
+    "method": "reconcile",
+    "version": "v4"
+  },
+  {
+    "type": "daily-oxygen-saturation",
+    "label": "Daily SpO₂",
+    "record": "daily",
+    "scope": "health_metrics_and_measurements",
+    "rollup": false,
+    "method": "reconcile",
+    "version": "v4"
+  },
+  {
+    "type": "daily-respiratory-rate",
+    "label": "Breathing rate",
+    "record": "daily",
+    "scope": "health_metrics_and_measurements",
+    "rollup": false,
+    "method": "reconcile",
+    "version": "v4"
+  },
+  {
+    "type": "daily-resting-heart-rate",
+    "label": "Resting heart rate",
+    "record": "daily",
+    "scope": "health_metrics_and_measurements",
+    "rollup": false,
+    "method": "reconcile",
+    "version": "v4"
+  },
+  {
+    "type": "daily-sleep-temperature-derivations",
+    "label": "Nightly skin temperature",
+    "record": "daily",
+    "scope": "health_metrics_and_measurements",
+    "rollup": false,
+    "method": "reconcile",
+    "version": "v4"
+  },
+  {
+    "type": "daily-vo2-max",
+    "label": "Cardio fitness",
+    "record": "daily",
+    "scope": "activity_and_fitness",
+    "rollup": false,
+    "method": "reconcile",
+    "version": "v4"
+  },
+  {
+    "type": "distance",
+    "label": "Distance",
+    "record": "interval",
+    "scope": "activity_and_fitness",
+    "rollup": true,
+    "method": "reconcile",
+    "version": "v4"
+  },
+  {
+    "type": "electrocardiogram",
+    "label": "ECG",
+    "record": "session",
+    "scope": "ecg",
+    "rollup": false,
+    "method": "list",
+    "version": "v4"
+  },
+  {
+    "type": "exercise",
+    "label": "Workouts",
+    "record": "session",
+    "scope": "activity_and_fitness",
+    "rollup": false,
+    "method": "reconcile",
+    "version": "v4"
+  },
+  {
+    "type": "floors",
+    "label": "Floors climbed",
+    "record": "interval",
+    "scope": "activity_and_fitness",
+    "rollup": true,
+    "method": "reconcile",
+    "version": "v4"
+  },
+  {
+    "type": "food",
+    "label": "Foods in Google Health",
+    "record": "food",
+    "scope": "nutrition",
+    "rollup": false,
+    "method": "list",
+    "version": "v4"
+  },
+  {
+    "type": "food-measurement-unit",
+    "label": "Portion units",
+    "record": "food",
+    "scope": "nutrition",
+    "rollup": false,
+    "method": "list",
+    "version": "v4"
+  },
+  {
+    "type": "heart-rate",
+    "label": "Heart rate through the day",
+    "record": "sample",
+    "scope": "health_metrics_and_measurements",
+    "rollup": true,
+    "method": "reconcile",
+    "version": "v4"
+  },
+  {
+    "type": "heart-rate-variability",
+    "label": "Overnight HRV",
+    "record": "sample",
+    "scope": "health_metrics_and_measurements",
+    "rollup": false,
+    "method": "reconcile",
+    "version": "v4"
+  },
+  {
+    "type": "height",
+    "label": "Height",
+    "record": "sample",
+    "scope": "health_metrics_and_measurements",
+    "rollup": false,
+    "method": "reconcile",
+    "version": "v4"
+  },
+  {
+    "type": "hydration-log",
+    "label": "Hydration from Google",
+    "record": "session",
+    "scope": "nutrition",
+    "rollup": true,
+    "method": "reconcile",
+    "version": "v4"
+  },
+  {
+    "type": "irregular-rhythm-notification",
+    "label": "Irregular rhythm",
+    "record": "session",
+    "scope": "irn",
+    "rollup": false,
+    "method": "list",
+    "version": "v4"
+  },
+  {
+    "type": "nutrition-log",
+    "label": "Nutrition from Google",
+    "record": "session",
+    "scope": "nutrition",
+    "rollup": true,
+    "method": "reconcile",
+    "version": "v4"
+  },
+  {
+    "type": "oxygen-saturation",
+    "label": "SpO₂ over time",
+    "record": "sample",
+    "scope": "health_metrics_and_measurements",
+    "rollup": false,
+    "method": "reconcile",
+    "version": "v4"
+  },
+  {
+    "type": "respiratory-rate-sleep-summary",
+    "label": "Breathing by sleep stage",
+    "record": "sample",
+    "scope": "health_metrics_and_measurements",
+    "rollup": false,
+    "method": "reconcile",
+    "version": "v4"
+  },
+  {
+    "type": "run-vo2-max",
+    "label": "Running VO₂ max",
+    "record": "sample",
+    "scope": "activity_and_fitness",
+    "rollup": true,
+    "method": "reconcile",
+    "version": "v4"
+  },
+  {
+    "type": "sedentary-period",
+    "label": "Sedentary periods",
+    "record": "interval",
+    "scope": "activity_and_fitness",
+    "rollup": true,
+    "method": "reconcile",
+    "version": "v4"
+  },
+  {
+    "type": "skin-temperature-sensors",
+    "label": "Temperature sensors",
+    "record": "sample",
+    "scope": "health_metrics_and_measurements",
+    "rollup": false,
+    "method": "list",
+    "version": "v4beta"
+  },
+  {
+    "type": "sleep",
+    "label": "Sleep",
+    "record": "session",
+    "scope": "sleep",
+    "rollup": false,
+    "method": "reconcile",
+    "version": "v4"
+  },
+  {
+    "type": "steps",
+    "label": "Steps",
+    "record": "interval",
+    "scope": "activity_and_fitness",
+    "rollup": true,
+    "method": "reconcile",
+    "version": "v4"
+  },
+  {
+    "type": "swim-lengths-data",
+    "label": "Swimming",
+    "record": "interval",
+    "scope": "activity_and_fitness",
+    "rollup": true,
+    "method": "reconcile",
+    "version": "v4"
+  },
+  {
+    "type": "time-in-heart-rate-zone",
+    "label": "Time in heart-rate zones",
+    "record": "interval",
+    "scope": "activity_and_fitness",
+    "rollup": true,
+    "method": "reconcile",
+    "version": "v4"
+  },
+  {
+    "type": "total-calories",
+    "label": "Total energy burned",
+    "record": "interval",
+    "scope": "activity_and_fitness",
+    "rollup": true,
+    "method": "list",
+    "version": "v4"
+  },
+  {
+    "type": "vo2-max",
+    "label": "VO₂ max measurements",
+    "record": "sample",
+    "scope": "activity_and_fitness",
+    "rollup": false,
+    "method": "reconcile",
+    "version": "v4"
+  },
+  {
+    "type": "weight",
+    "label": "Weight",
+    "record": "sample",
+    "scope": "health_metrics_and_measurements",
+    "rollup": true,
+    "method": "reconcile",
+    "version": "v4"
+  },
+  {
+    "type": "account-profile",
+    "label": "Google profile and stride length",
+    "record": "account",
+    "scope": "profile",
+    "rollup": false,
+    "method": "get",
+    "version": "v4"
+  },
+  {
+    "type": "account-settings",
+    "label": "Google Health settings and goals",
+    "record": "account",
+    "scope": "settings",
+    "rollup": false,
+    "method": "get",
+    "version": "v4"
+  }
+]

@@ -117,7 +117,8 @@ def session_entry(point, key, timezone):
         "name": value.get("displayName") or value.get("exerciseType", "Aktivita"), "activity": value.get("exerciseType", "other").lower(),
         "minutes": duration, "calories": metrics.get("caloriesKcal"),
         "distance_km": metrics["distanceMillimeters"] / 1000000 if "distanceMillimeters" in metrics else None,
-        "avg_hr": float(metrics["averageHeartRateBeatsPerMinute"]) if "averageHeartRateBeatsPerMinute" in metrics else None})
+        "avg_hr": float(metrics["averageHeartRateBeatsPerMinute"]) if "averageHeartRateBeatsPerMinute" in metrics else None,
+        "start": interval.get("startTime", ""), "end": interval.get("endTime", "")})
 
 
 async def sync(days=30):
@@ -215,6 +216,39 @@ async def _sync(days):
                         vitals.setdefault(day, {})[dest] = int(value) if dest == "steps" else value
                         changed.add(day)
             except (ValueError, KeyError, httpx.HTTPError) as exc:
+                errors.append(str(exc)[:400])
+
+        # Minute-level series power heart-rate zones, strain, stress and heart-rate recovery.
+        # The API caps heart-rate roll-ups at 14 days per request, so the window is chunked.
+        zone = ZoneInfo(profile.timezone)
+        for typ, key, field in (("heart-rate", "heartRate", "beatsPerMinuteAvg"), ("steps", "steps", "countSum")):
+            try:
+                samples, cursor = [], datetime.combine(start, datetime.min.time(), zone)
+                stop_at = datetime.combine(end, datetime.min.time(), zone)
+                while cursor < stop_at:
+                    chunk_end = min(stop_at, cursor + timedelta(days=14))
+                    page_token = ""
+                    for _ in range(40):
+                        body = {"range": {"startTime": cursor.astimezone(ZoneInfo("UTC")).isoformat().replace("+00:00", "Z"),
+                                          "endTime": chunk_end.astimezone(ZoneInfo("UTC")).isoformat().replace("+00:00", "Z")},
+                                "windowSize": "60s", "pageSize": 10000, "dataSourceFamily": "users/me/dataSourceFamilies/google-wearables"}
+                        if page_token:
+                            body["pageToken"] = page_token
+                        r = await client.post(f"https://health.googleapis.com/v4/users/me/dataTypes/{typ}/dataPoints:rollUp", json=body, headers=headers)
+                        if r.status_code != 200:
+                            raise ValueError(api_error(r, typ + " (minutes)"))
+                        payload = r.json()
+                        for p in payload.get("rollupDataPoints", []):
+                            value = p.get(key, {}).get(field)
+                            if value is not None and p.get("startTime"):
+                                when = datetime.fromisoformat(p["startTime"].replace("Z", "+00:00"))
+                                samples.append((int(when.timestamp() // 60), float(value)))
+                        page_token = payload.get("nextPageToken", "")
+                        if not page_token:
+                            break
+                    cursor = chunk_end
+                google_data.store_minutes(typ + "-minutes", samples, start.isoformat(), end.isoformat(), profile.timezone)
+            except (ValueError, KeyError, TypeError, httpx.HTTPError) as exc:
                 errors.append(str(exc)[:400])
 
         for typ in ("sleep", "exercise"):

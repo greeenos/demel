@@ -1,7 +1,7 @@
 # runtime data and secrets: never commit
-data/
-data-browser/
-backups/
+/data/
+/data-browser/
+/backups/
 .env*
 ACCESS.txt
 
