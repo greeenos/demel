@@ -7,7 +7,8 @@
 <p align="center">
   <strong>A private, self-hosted health dashboard for one person.</strong><br>
   Sleep, recovery, movement, food, hydration and longevity in one calm iPhone PWA,<br>
-  fed by your Fitbit / Google Health data, with an AI coach that can log for you.
+  fed by your Fitbit / Google Health data, with an AI coach that can log for you,<br>
+  and sip reminders that cover every screen through a small desktop app.
 </p>
 
 <p align="center">
@@ -16,6 +17,7 @@
   <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-vanilla-1f1f23?style=flat-square&logo=typescript&logoColor=white">
   <img alt="SQLite" src="https://img.shields.io/badge/SQLite-WAL-1f1f23?style=flat-square&logo=sqlite&logoColor=white">
   <img alt="PWA" src="https://img.shields.io/badge/PWA-iPhone%20ready-1f1f23?style=flat-square&logo=apple&logoColor=white">
+  <img alt="Desktop" src="https://img.shields.io/badge/Desktop-Windows%20%C2%B7%20macOS%20%C2%B7%20Linux-1f1f23?style=flat-square&logo=tauri&logoColor=white">
 </p>
 
 <p align="center">
@@ -52,7 +54,8 @@ Commercial health apps keep your data on their servers and hide how their scores
 - Food diary with calories, macros and fiber, a food library and saved portions.
 - Describe a meal or snap a photo and the AI estimates the portion; you always review it before saving.
 - Hydration with one-tap **Sip / Half glass / Glass** buttons. Drops fall into a human-figure vessel that fills up.
-- An adaptive sip-reminder schedule that spaces reminders across your drinking window.
+- **Sip reminders** at random times across your reminder hours: the time left divided by the sips left, times a random factor between 0.5 and 1.5, never sooner than 5 minutes. A glass or a bottle you log reshapes the rest of the day.
+- A **full-screen reminder** (Done / In 5 min / Skip) covers the open app, the phone notification opens it, and the **desktop app** covers every monitor. Answering on one device clears it everywhere, and the phone stays quiet while you are at a computer.
 
 **Training**
 - Workouts with exercises and sets, RPE, a stopwatch and a rest timer.
@@ -85,6 +88,12 @@ Commercial health apps keep your data on their servers and hide how their scores
   <img src="docs/screenshots/mobile-training.png" width="24%" alt="Training">
 </p>
 <p align="center">
+  <img src="docs/screenshots/mobile-sip-reminder.png" width="24%" alt="Sip reminder">
+</p>
+<p align="center">
+  <img src="docs/screenshots/desktop-sip-reminder.png" width="100%" alt="Desktop app: full-screen sip reminder">
+</p>
+<p align="center">
   <img src="docs/screenshots/desktop-trends.png" width="100%" alt="Desktop: Trends">
 </p>
 <p align="center">
@@ -98,9 +107,10 @@ Commercial health apps keep your data on their servers and hide how their scores
 ## How it works
 
 ```
-iPhone PWA / browser
+iPhone PWA / browser        desktop app (tray, every monitor)
+   │                           │  SSE /api/hydration/events, device token
    │  HTTPS (e.g. Tailscale Serve)
-   ▼
+   ▼                           ▼
 FastAPI + Uvicorn  ── serves the built frontend and the /api
    │        │
    │        ├── scheduler: hourly Google Health sync, push reminders, daily backup
@@ -174,11 +184,22 @@ Open the app in Safari → **Share → Add to Home Screen**, open it from the ic
 
 ## Sip reminders and the desktop app
 
-Hydration reminders come at random times spread over your reminder hours (Settings → Hydration schedule). When a sip is due, a full-screen reminder covers the open app, and tapping the phone notification opens it (`/?overlay=1`). The desktop app in [`desktop/`](desktop/README.md) (Windows, macOS, Linux) runs in the tray and covers every monitor until you answer. Answering on one device clears the reminder everywhere, and while you are at a computer the phone stays quiet.
+Set the reminder hours, days and sip size in **Settings → Hydration schedule** and turn on **Hydration reminders** under Smart notifications. When a sip is due, a full-screen reminder covers the open app, and tapping the phone notification opens it (`/?overlay=1`; Enter = done, Esc = in 5 min). Answering on any device clears the reminder everywhere.
+
+The desktop app lives in the tray and covers every monitor until you answer. While it sees you using the computer, Demel skips the phone push. It is a ~2–5 MB installer built with Tauri; the source is in [`desktop/`](desktop/README.md).
+
+| Platform | Download from [Releases](../../releases/latest) |
+|---|---|
+| Windows | `Demel_x.y.z_x64-setup.exe`, or the portable `.exe` |
+| macOS (Intel + Apple Silicon) | `Demel_x.y.z_universal.dmg`, then run `xattr -cr /Applications/Demel.app` once (unsigned build) |
+| Linux | `Demel_x.y.z_amd64.AppImage` or `.deb` (the tray icon needs `libayatana-appindicator3`) |
+
+On first launch, enter your Demel address and password. The password is exchanged once for a device token and never stored. Tray menu: *I took a sip*, *+250 ml glass*, *+500 ml bottle*, *Remind everywhere now*, *Open Demel*, *Start at login*.
 
 ## Security and privacy
 
 - Single user. Login uses PBKDF2-SHA256 (600k iterations), an HttpOnly SameSite cookie stored as a SHA-256 hash server side, and rate limiting.
+- The desktop app gets a device token (a 365-day session, sent as `Authorization: Bearer`). Its windows hand the token over in the URL fragment, which never reaches the server, and swap it for the usual cookie. Changing the password revokes every session and device.
 - Every non-GET request is checked against `APP_URL` (CSRF), and request bodies are capped at 9 MB.
 - Integration secrets (OpenRouter key, Google OAuth client and tokens, VAPID key) are encrypted at rest with Fernet.
 - Strict CSP (`script-src 'self'`), `X-Frame-Options: DENY`, `no-referrer` and `nosniff`.
@@ -214,9 +235,10 @@ The browser checks in `scripts/` need an isolated test backend. They create test
 DATA_DIR=data-browser APP_URL=http://127.0.0.1:8208 PORT=8208 \
 APP_PASSWORD_HASH=... ENCRYPTION_KEY=... .venv/bin/python run.py
 VITAL_TEST_URL=http://127.0.0.1:8208 VITAL_TEST_PASSWORD=... .venv/bin/python scripts/browser_check.py
+VITAL_TEST_PASSWORD=... .venv/bin/python scripts/sip_browser_check.py   # full-screen reminder, device token, SSE
 ```
 
-`scripts/screenshots.py` regenerates the README screenshots from the demo.
+Set `PW_CHROMIUM` to any installed Chromium (e.g. Brave) if Playwright's own browser is not installed. `scripts/screenshots.py` regenerates the README screenshots from the demo. The desktop app is built on GitHub Actions; see [desktop/README.md](desktop/README.md).
 
 ## Project structure
 
@@ -232,21 +254,24 @@ backend/
   google_health.py  OAuth and sync
   google_data.py    lossless daily archive for 42 data types
   coach_tools.py    tools the AI coach may call to log entries
-  hydration.py      adaptive sip-reminder schedule
+  hydration.py      sip-reminder schedule, desktop presence
   notifications.py  Web Push and the background scheduler
   db.py             SQLite helpers, encrypted secrets, backups
 frontend/
   main.ts           state, actions, forms, motion system
   views.ts          screens
   insights.ts       Google data and long-term health views
+  sip.ts            full-screen sip reminder (/?overlay=1)
   water.ts          hydration vessel and drop physics
   ui.ts             components, charts, wordmark
   icons.ts          generated Streamline duo icons
   style.css         the design system
 public/             logo, PWA manifest, service worker
+desktop/            tray app for Windows, macOS and Linux (Tauri, GPL-3.0)
 docs/               design system and scientific method
 tests/              pytest suite
 scripts/            browser checks, screenshots, icon export
+.github/workflows/  desktop builds and releases
 ```
 
 ## Credits
@@ -255,6 +280,7 @@ scripts/            browser checks, screenshots, icon export
 - Wordmark: [Unbounded](https://fonts.google.com/specimen/Unbounded) (SIL Open Font License 1.1), converted to outlines.
 - Fitness reference: Kaminsky et al., FRIEND registry, Mayo Clinic Proceedings 2022.
 - PhenoAge: Levine et al., Aging 2018.
+- Desktop app: started as Drinky, itself a fork of [BreakTimer](https://github.com/tom-james-watson/breaktimer-app) by Tom Watson (GPL-3.0).
 
 ## Disclaimer
 
