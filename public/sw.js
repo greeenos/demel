@@ -1,4 +1,4 @@
-const CACHE='vital-shell-v6';
+const CACHE='vital-shell-v7';
 const SHELL=['/','/manifest.webmanifest','/icon-192.png','/icon-512.png'];
 self.addEventListener('install',event=>{event.waitUntil((async()=>{const cache=await caches.open(CACHE);await cache.addAll(SHELL);const html=await (await cache.match('/')).text();const assets=[...html.matchAll(/(?:src|href)="(\/assets\/[^\"]+)"/g)].map(m=>m[1]);await cache.addAll(assets);await self.skipWaiting();})());});
 self.addEventListener('activate',event=>{event.waitUntil((async()=>{for(const key of await caches.keys())if(key.startsWith('vital-shell-')&&key!==CACHE)await caches.delete(key);await self.clients.claim();})());});
