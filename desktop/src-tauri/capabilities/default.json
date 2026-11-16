@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Local connect window only; the remote Demel pages get no IPC.",
+  "windows": ["settings"],
+  "permissions": ["core:default"]
+}

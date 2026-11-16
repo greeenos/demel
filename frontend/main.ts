@@ -5,12 +5,13 @@ import { nav, meals, activities, todayView, healthView, nutritionView, workoutsV
 import { demoState } from './demo';
 import { launch, settle } from './water';
 import { homeView, ringDetail, journalView, fitnessView, biologyView, bioCategoryModal, bioConfidenceModal, methodModal, sessionModal, addMenu, askBar, type Ring } from './screens';
+import { adoptDevice, bindSip, followSips, sipView, startSipPage, type Sip } from './sip';
 
 const app=document.querySelector<HTMLDivElement>('#app')!;
 let state:Obj|null=null, demo=false, offline=false, busy=false, healthTab='vitals';
 const todayStr=()=>new Intl.DateTimeFormat('en-CA').format(new Date());
 let selectedDay=todayStr(),lastToday=selectedDay;
-let route=location.hash.slice(1)||'today';
+let route=location.hash.startsWith('#device=')?'today':location.hash.slice(1)||'today';
 let activeImage:string|null=null;
 let historyEntries:Obj[]=[];
 let pendingWater:number|null=null;
@@ -44,8 +45,18 @@ async function api(path:string,method='GET',body?:unknown):Promise<any>{
  const data=await r.json().catch(()=>({detail:'The server returned an invalid response.'}));
  if(!r.ok){let message=data.detail;if(Array.isArray(message))message=message.map((e:Obj)=>`${e.loc?.slice(1).join('.')}: ${e.msg}`).join('; ');throw new Error(message||'Request failed.');}return data;
 }
+/* Full-screen sip reminder over the open app (the desktop app shows the same page on every monitor). */
+const sipLayer=document.createElement('div');sipLayer.id='sip-layer';
+let stopSips:(()=>void)|null=null;
+function showSip(s:Sip|null){
+ if(!s){sipLayer.querySelector('.sip-full')?.remove();return;}
+ if(s.due){sipLayer.innerHTML=sipView(s,false);if(!sipLayer.isConnected)document.body.append(sipLayer);sipLayer.querySelector<HTMLElement>('[data-sip=drink]')?.focus();}
+ else if(sipLayer.isConnected){sipLayer.remove();sipLayer.innerHTML='';}
+}
+bindSip(sipLayer,s=>{showSip(s);if(s&&!s.due)load().catch(()=>{});},message=>toast(message,true));
 async function load(before?:Promise<unknown>){
  state=await api('/state?day='+selectedDay);offline=false;
+ if(!stopSips&&!demo)stopSips=followSips(showSip);
  if(state!.profile.offline_cache)localStorage.setItem('vital-snapshot',JSON.stringify(state));else localStorage.removeItem('vital-snapshot');
  if(before)await before.catch(()=>{});
  render();
@@ -219,7 +230,7 @@ async function action(value:string,target?:HTMLElement){
  if(value==='enable-push'){await enablePush();return;}
  if(value==='test-push'){await api('/push/test','POST');toast('Test notification sent.');return;}
  if(value==='export'){if(demo)throw new Error('The demo contains none of your data.');location.assign('/api/export');return;}
- if(value==='logout'){await api('/auth/logout','POST');localStorage.removeItem('vital-snapshot');state=null;loginView();return;}
+ if(value==='logout'){await api('/auth/logout','POST');localStorage.removeItem('vital-snapshot');stopSips?.();stopSips=null;showSip({due:false} as Sip);state=null;loginView();return;}
  if(value.startsWith('ask:')){await sendChat(value.slice(4));return;}
  if(value==='clear-chat'){if(!confirm('Clear the AI chat history?'))return;await api('/ai/chat','DELETE');await load();return;}
 }
@@ -290,7 +301,7 @@ async function enablePush(){if(!('serviceWorker' in navigator)||!('PushManager' 
 
 function loginView(){document.body.dataset.route='login';document.documentElement.dataset.theme='dark';app.innerHTML=`<main class="login-layout"><section class="login-story"><a class="brand" href="#"><img class="brand-mark" src="/icon.svg?v=2" alt="" width="32" height="32">${wordmark}</a><div><span class="login-illustration"><img src="/icon.svg?v=2" alt=""></span><h1>Your health.<br>In your hands.</h1><p>Sleep, movement, nutrition and longevity.<br>In one private space.</p></div><span class="login-private">${icon('shield')} Stored on your own server</span></section><section class="login-panel"><div class="login-box"><span class="pill green">Your private space</span><h2>Welcome to Demel.</h2><p>Log in to your health overview.</p><form id="login-form">${input('password','Password','','type="password" autocomplete="current-password" required')}<button class="btn primary wide" type="submit">Open my overview ${icon('arrow')}</button><p class="form-error" role="alert"></p></form><div class="login-divider"><span>or look around first</span></div>${button('Explore the demo','demo','secondary wide','eye')}<p class="login-note">On iPhone, add the app to your Home Screen from the Share menu in Safari.</p></div></section></main>`;}
 
-async function boot(){app.innerHTML=`<div class="boot"><span class="brand"><img class="brand-mark" src="/icon.svg?v=2" alt="" width="32" height="32">${wordmark}</span><p>Loading your space…</p></div>`;try{const auth=await api('/auth/status');if(auth.authenticated)await load();else{localStorage.removeItem('vital-snapshot');loginView();}}catch{const saved=localStorage.getItem('vital-snapshot');if(saved){try{state=JSON.parse(saved);offline=true;render();}catch{loginView();}}else{loginView();toast('Server unreachable. Check your connection (e.g. Tailscale).',true);}}if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});const status=new URLSearchParams(location.search).get('google');if(status){toast(status==='connected'?'Google account connected. Run your first sync.':status==='denied'?'The Google connection was not confirmed.':'Google sign-in failed. Check your OAuth settings.',status!=='connected');history.replaceState(null,'',location.pathname+location.hash);}}
+async function boot(){if(new URLSearchParams(location.search).has('overlay')){await startSipPage(app);return;}app.innerHTML=`<div class="boot"><span class="brand"><img class="brand-mark" src="/icon.svg?v=2" alt="" width="32" height="32">${wordmark}</span><p>Loading your space…</p></div>`;try{await adoptDevice();const auth=await api('/auth/status');if(auth.authenticated)await load();else{localStorage.removeItem('vital-snapshot');loginView();}}catch{const saved=localStorage.getItem('vital-snapshot');if(saved){try{state=JSON.parse(saved);offline=true;render();}catch{loginView();}}else{loginView();toast('Server unreachable. Check your connection (e.g. Tailscale).',true);}}if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});const status=new URLSearchParams(location.search).get('google');if(status){toast(status==='connected'?'Google account connected. Run your first sync.':status==='denied'?'The Google connection was not confirmed.':'Google sign-in failed. Check your OAuth settings.',status!=='connected');history.replaceState(null,'',location.pathname+location.hash);}}
 window.addEventListener('online',()=>{if(!demo&&state)load().catch(()=>{});});
 window.addEventListener('offline',()=>{offline=true;render();});
 boot();

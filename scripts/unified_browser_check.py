@@ -19,9 +19,9 @@ db.put('hydration_schedule',{'day':day,'next_at':datetime.now(ZoneInfo('Europe/P
 password = os.environ['VITAL_TEST_PASSWORD']  # password of the isolated test backend
 errors=[]
 with sync_playwright() as p:
- b=p.chromium.launch();page=b.new_page(viewport={'width':390,'height':844},is_mobile=True,has_touch=True);page.on('pageerror',lambda e:errors.append(str(e)))
+ b=p.chromium.launch(executable_path=os.environ.get('PW_CHROMIUM') or None);page=b.new_page(viewport={'width':390,'height':844},is_mobile=True,has_touch=True);page.on('pageerror',lambda e:errors.append(str(e)))
  page.goto(os.environ.get('VITAL_TEST_URL','http://127.0.0.1:8208'));page.locator('[name=password]').fill(password);page.locator('#login-form button').click()
- expect(page.locator('.sip-reminder')).to_be_visible();page.locator('[data-action="hydrate:snooze"]').click();expect(page.locator('.sip-reminder')).to_have_count(0)
+ expect(page.locator('.sip-overlay h1')).to_have_text('Time for a sip',timeout=8000);page.locator('[data-sip=snooze]').click();expect(page.locator('.sip-overlay')).to_have_count(0)
  page.locator('[data-action="hydration-settings"]').click();page.locator('[name=sip_ml]').fill('75');page.locator('#hydration-form button[type=submit]').click();expect(page.locator('[data-action="water:75"]')).to_be_visible()
  page.locator('.bottom-nav [data-action="nav:workouts"]').click();page.locator('[data-action="training-history"]').click();expect(page.locator('.history-workout')).to_have_count(30)
  page.locator('[data-action="training-page:30"]').click();expect(page.locator('.history-workout')).not_to_have_count(0)
