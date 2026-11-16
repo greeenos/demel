@@ -1541,3 +1541,20 @@ body[data-bevel] .page-heading { display: none; }
   .stress-stats strong { font-size: 28px; }
   .gauge { width: 100px; height: 100px; }
 }
+
+/* Full-screen sip reminder: desktop overlay windows (?overlay=1), tapped notifications, and over the open app. */
+.sip-overlay { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; overflow: auto; padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom)); background: var(--bg-glow), var(--bg); animation: sip-in .35s var(--ease-out); }
+.sip-box { width: min(560px, 100%); display: grid; justify-items: center; gap: 14px; text-align: center; }
+.sip-box h1 { margin: 0; font-size: clamp(36px, 6vw, 60px); font-weight: 680; letter-spacing: -.045em; line-height: 1.02; }
+.sip-box > p { margin: 0; max-width: 34ch; color: var(--muted); font-size: 17px; }
+.sip-box .brand .wordmark { height: 24px; }
+.sip-figure .water-vessel { width: 92px; height: 180px; filter: drop-shadow(0 14px 30px color-mix(in srgb, var(--blue) 32%, transparent)); }
+.sip-meter { width: min(320px, 80%); height: 8px; overflow: hidden; border-radius: 99px; background: color-mix(in srgb, var(--muted) 22%, transparent); }
+.sip-meter span { display: block; height: 100%; border-radius: inherit; background: var(--blue); }
+.sip-box .button-row { justify-content: center; margin-top: 8px; }
+.sip-box .btn.primary { padding-inline: 26px; font-size: 17px; }
+.sip-keys { margin: 4px 0 0; font-size: 12.5px; color: var(--muted); opacity: .75; }
+.sip-overlay.calm h1 { font-size: clamp(28px, 4vw, 42px); }
+@media (hover: none) { .sip-keys { display: none; } }
+@media (prefers-reduced-motion: reduce) { .sip-overlay { animation: none; } }
+@keyframes sip-in { from { opacity: 0; transform: scale(.985); } }

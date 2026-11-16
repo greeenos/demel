@@ -101,8 +101,10 @@ def tick():
     if due(profile.evening_time):
         notices.append(("evening", "Time to wind down", "Log your day and get ready for sleep.", "/#health"))
     water = hydration.status(profile, local)
-    if profile.water_reminders and water["due"]:
-        notices.append(("sip-" + str(int(water["next_at"])), "Time for some water", f"Have {water['settings']['sip_ml']} ml, then confirm it in the app.", "/#nutrition"))
+    # While a desktop app sees you at the computer, its full-screen overlay is enough; the
+    # push is not marked as sent, so it still goes out if you walk away before drinking.
+    if profile.water_reminders and water["due"] and not hydration.at_computer():
+        notices.append(("sip-" + str(int(water["next_at"])), "Time for some water", f"Have {water['settings']['sip_ml']} ml, then confirm it in the app.", "/?overlay=1"))
     if workout and not today.get("workout_minutes"):
         notices.append(("workout", "Room to move", "No activity logged yet today. A walk counts too.", "/#workouts"))
     for tag, title, body, url in notices:

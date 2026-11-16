@@ -172,6 +172,10 @@ Add an OpenRouter API key and a model in **Settings → OpenRouter AI**, then tu
 
 Open the app in Safari → **Share → Add to Home Screen**, open it from the icon, then go to **Settings → Smart notifications → Enable on this device** and send a test. iOS Web Push needs the app installed on the Home Screen. Delivery times are best effort.
 
+## Sip reminders and the desktop app
+
+Hydration reminders come at random times spread over your reminder hours (Settings → Hydration schedule). When a sip is due, a full-screen reminder covers the open app, and tapping the phone notification opens it (`/?overlay=1`). The desktop app in [`desktop/`](desktop/README.md) (Windows, macOS, Linux) runs in the tray and covers every monitor until you answer. Answering on one device clears the reminder everywhere, and while you are at a computer the phone stays quiet.
+
 ## Security and privacy
 
 - Single user. Login uses PBKDF2-SHA256 (600k iterations), an HttpOnly SameSite cookie stored as a SHA-256 hash server side, and rate limiting.
@@ -258,4 +262,4 @@ Demel is a personal wellness tool, not a medical device. Its scores are transpar
 
 ## License
 
-No open-source license has been chosen yet, so the code is © the author, all rights reserved. Third-party assets keep their own licenses (see Credits).
+No open-source license has been chosen yet, so the code is © the author, all rights reserved. Third-party assets keep their own licenses (see Credits). The desktop app in `desktop/` is GPL-3.0-or-later (see `desktop/LICENSE.md`).

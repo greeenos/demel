@@ -15,7 +15,7 @@ from zoneinfo import ZoneInfo
 
 import httpx
 from fastapi import FastAPI, HTTPException, Request, Response, Query
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.gzip import GZipMiddleware
 from pydantic import Field, ValidationError
@@ -44,6 +44,12 @@ def password_matches(password):
 def password_hash(password):
     salt = secrets.token_hex(16)
     return salt + ":" + hashlib.pbkdf2_hmac("sha256", password.encode(), bytes.fromhex(salt), 600000).hex()
+
+
+def request_token(request):
+    """Browsers send the session cookie; the desktop app sends its device token as a Bearer header."""
+    header = request.headers.get("authorization", "")
+    return header[7:].strip() if header[:7].lower() == "bearer " else request.cookies.get("vital_session", "")
 
 
 def authenticated(token):
@@ -89,8 +95,8 @@ async def protection(request: Request, call_next):
             if len(raw) > 9000000:
                 return JSONResponse({"detail": "Request is too large."}, 413)
         request._body = bytes(raw)
-    public = ("/api/health", "/api/auth/login", "/api/auth/status", "/api/google/callback")
-    if path.startswith("/api/") and path not in public and not authenticated(request.cookies.get("vital_session", "")):
+    public = ("/api/health", "/api/auth/login", "/api/auth/device", "/api/auth/status", "/api/google/callback")
+    if path.startswith("/api/") and path not in public and not authenticated(request_token(request)):
         return JSONResponse({"detail": "Please log in again."}, 401)
     response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
@@ -127,26 +133,54 @@ def health():
 
 @app.get("/api/auth/status")
 def auth_status(request: Request):
-    return {"authenticated": authenticated(request.cookies.get("vital_session", ""))}
+    return {"authenticated": authenticated(request_token(request))}
 
 
-@app.post("/api/auth/login")
-async def login(body: Login, request: Request, response: Response):
+async def check_password(password, request):
     ip = request.client.host if request.client else "unknown"
     attempts = login_attempts[ip]
     while attempts and attempts[0] < time.time() - 900:
         attempts.popleft()
     if len(attempts) >= 8:
         raise HTTPException(429, "Too many attempts. Try again in 15 minutes.")
-    if not await asyncio.to_thread(password_matches, body.password):
+    if not await asyncio.to_thread(password_matches, password):
         attempts.append(time.time())
         raise HTTPException(401, "Wrong password.")
     attempts.clear()
+
+
+def new_session(days):
     token = secrets.token_urlsafe(48)
     with db.db() as c:
         c.execute("DELETE FROM sessions WHERE expires<?", (time.time(),))
-        c.execute("INSERT INTO sessions VALUES(?,?)", (hashlib.sha256(token.encode()).hexdigest(), time.time() + 30 * 86400))
-    response.set_cookie("vital_session", token, httponly=True, secure=APP_URL.startswith("https://"), samesite="lax", max_age=30 * 86400, path="/")
+        c.execute("INSERT INTO sessions VALUES(?,?)", (hashlib.sha256(token.encode()).hexdigest(), time.time() + days * 86400))
+    return token
+
+
+def set_session_cookie(response, token, days):
+    response.set_cookie("vital_session", token, httponly=True, secure=APP_URL.startswith("https://"), samesite="lax", max_age=days * 86400, path="/")
+
+
+@app.post("/api/auth/login")
+async def login(body: Login, request: Request, response: Response):
+    await check_password(body.password, request)
+    set_session_cookie(response, new_session(30), 30)
+    return {"ok": True}
+
+
+@app.post("/api/auth/device")
+async def device_login(body: Login, request: Request):
+    """Long-lived token for the desktop app. Changing the password revokes it like any session."""
+    await check_password(body.password, request)
+    return {"token": new_session(365)}
+
+
+@app.post("/api/auth/adopt")
+def adopt_device(request: Request, response: Response):
+    """Desktop windows open pages with #device=<token>; the page swaps it for the usual cookie."""
+    if not request.headers.get("authorization"):
+        raise HTTPException(400, "Send the device token as a Bearer header.")
+    set_session_cookie(response, request_token(request), 365)
     return {"ok": True}
 
 
@@ -225,11 +259,51 @@ def hydration_settings(body: hydration.Settings):
     return hydration.status(profile())
 
 
+class Drink(Model):
+    ml: int | None = Field(default=None, ge=1, le=3000)
+
+
 @app.post("/api/hydration/{action}")
-def hydration_action(action: str):
+def hydration_action(action: str, body: Drink | None = None):
+    if action == "presence":
+        hydration.presence()
+        return {"ok": True}
+    p = profile()
+    if action == "remind":
+        return hydration.remind(p)
+    if action == "drink":
+        # The desktop tray and the overlay log here, so they need not know the user's day or sip size.
+        ml = (body.ml if body else None) or hydration.Settings.model_validate(db.get("hydration_settings", {})).sip_ml
+        create_entry(Entry(kind="water", day=datetime.now(ZoneInfo(p.timezone)).date(), data={"ml": ml}))
+        return hydration.status(p)
     if action not in ("snooze", "skip"):
         raise HTTPException(400, "Unknown reminder action")
-    return hydration.postpone(profile(), action)
+    return hydration.postpone(p, action)
+
+
+@app.get("/api/hydration/events")
+async def hydration_events(request: Request):
+    """SSE: the live sip state, sent on every change. Desktop apps show or hide their overlay from it."""
+    token = request_token(request)
+
+    async def stream():
+        last, quiet = None, 0
+        yield "retry: 5000\n\n"
+        while not await request.is_disconnected():
+            state = await asyncio.to_thread(lambda: hydration.live(hydration.status(profile())))
+            payload = json.dumps(state)
+            if payload != last:
+                last, quiet = payload, 0
+                yield f"data: {payload}\n\n"
+            else:
+                quiet += 1
+                if quiet % 10 == 0:  # ~20 s: keeps proxies and the desktop read timeout happy
+                    if not await asyncio.to_thread(authenticated, token):
+                        return  # password changed or logged out: the client reconnects and gets 401
+                    yield ": ping\n\n"
+            await asyncio.sleep(2)
+
+    return StreamingResponse(stream(), media_type="text/event-stream", headers={"X-Accel-Buffering": "no"})
 
 
 @app.get("/api/training/history")
